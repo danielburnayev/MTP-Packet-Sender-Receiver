@@ -15,7 +15,7 @@ struct mtp_packet { // must be 1472 bytes, max
     MTPHeader header;
     
     //can be data from a file or ACK-related stuff if acking
-    //1456 bytes, length of 1456
+    //1456 bytes, length of 1455 w/ the /0 char at the end
     char* contents; 
 } typedef MTPPacket;
 

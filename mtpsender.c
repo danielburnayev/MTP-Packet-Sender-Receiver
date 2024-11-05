@@ -20,11 +20,10 @@ int main(int argc, char** argv) {
     FILE* logFile;
     
     if (argc < 5 || argc > 6) {
-        int error = endWithErrorMessage(1, "There needs to be 5 to 6 parameters! Follow the format below:\n\
+        return endWithErrorMessage(1, "There needs to be 5 to 6 parameters! Follow the format below:\n\
 ./mtpsender <receiver-IP> <receiver-port> <window-size>	<input-file> <sender-logfile>\n\
 If <sender-logfile> isn't provided, a file called mtpsender_logs.txt will be created in\
 the directory this file is in.\n");
-         return error;
     }
     else {
         inputFile = fopen(argv[4], "r");
@@ -32,33 +31,51 @@ the directory this file is in.\n");
 
         if (!inputFile || !logFile) {
             closeImportantFiles(inputFile, logFile);
-            // fprintf(stderr, "%s%s", ((!inputFile) ? "Something wrong happened with the input file!\n" : ""), ((!logFile) ? "Something wrong happened with the log file!\n" : ""));
-            // return 0;
-
             return endWithErrorMessage(2, 
-                        ((!inputFile) ? "Something wrong happened with the input file!\n" : ""), 
-                        ((!logFile) ? "Something wrong happened with the log file!\n" : ""));
+                        ((!inputFile) ? "Cannot find the input file!\n" : ""), 
+                        ((!logFile) ? "Cannot find the log file!\n" : ""));
         }
     }
 
     //opens up a UDP client socket (NEED TO WORK ON THIS)
     int senderSocket;
     if ((senderSocket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        int error = endWithErrorMessage(1, "Socket couldn't be created!\n");
-        return error;
+        return endWithErrorMessage(1, "Socket couldn't be created!\n");
     }
-
 
     //sender needs to read the file
-    char messageBuffer[MAX_DATA_LENGTH];
-    if (fgets(messageBuffer, MAX_DATA_LENGTH, inputFile)) {
-        
-    }
+    char* theMessage = (char*)malloc(sizeof(char) * (MAX_DATA_LENGTH));
+    char* messageBuffer = (char*)malloc(sizeof(char) * (MAX_DATA_LENGTH));
+    size_t currMessageLen = strlen(theMessage);
+    int limit = MAX_DATA_LENGTH - currMessageLen;
 
+    while (!feof(inputFile)) {
+        //in case any /n's end fgets early
+        while (currMessageLen < MAX_DATA_LENGTH - 1 && !feof(inputFile)) {
+            fgets(messageBuffer, limit, inputFile);
+            strcat(theMessage, messageBuffer);
+            currMessageLen = strlen(theMessage);
+            limit = MAX_DATA_LENGTH - currMessageLen;
+        }
+
+        if (ferror(inputFile)) {
+            return endWithErrorMessage(1, "Something is wrong with the input file!\n");
+        }
+
+        free(theMessage);
+        free(messageBuffer);
+        messageBuffer = (char*)malloc(sizeof(char) * (MAX_DATA_LENGTH));
+        theMessage = (char*)malloc(sizeof(char) * (MAX_DATA_LENGTH));
+        currMessageLen = strlen(theMessage);
+        limit = MAX_DATA_LENGTH - currMessageLen;
+    }
+    free(theMessage);
+    free(messageBuffer);
 
     //creates and sends DATA packets (type = 1) to a receiver
     //receives ACK packets from receiver
 
+    //close the files
     closeImportantFiles(inputFile, logFile);
     return 1;
 }
